@@ -3,59 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polyrhythm Checker (2:3)</title>
+    <title>リズム正確度チェッカー</title>
     <style>
-        body { font-family: sans-serif; text-align: center; margin: 0; overflow: hidden; background: #f0f0f0; }
-        .container { display: flex; height: 80vh; }
-        .pad { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: white; user-select: none; touch-action: manipulation; }
-        #left-pad { background-color: #ff5f5f; } /* 2拍子 */
-        #right-pad { background-color: #5fafff; } /* 3拍子 */
-        #visualizer { height: 20vh; background: #333; position: relative; border-top: 4px solid #000; }
-        .marker { position: absolute; bottom: 0; width: 4px; height: 100%; background: white; }
-        .guide { position: absolute; bottom: 0; width: 2px; height: 50%; background: rgba(255,255,255,0.3); }
-        .hit { position: absolute; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); }
+        body { font-family: sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .controls { display: flex; justify-content: space-around; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        input { width: 60px; padding: 8px; font-size: 1.2rem; text-align: center; }
+        .tap-zones { display: flex; gap: 10px; height: 200px; }
+        .zone { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #ccc; border-radius: 10px; cursor: pointer; user-select: none; transition: background 0.1s; }
+        .zone:active, .zone.active { background: #e0e0e0; }
+        #left-zone { border-color: #ff4757; color: #ff4757; }
+        #right-zone { border-color: #2e86de; color: #2e86de; }
+        .results { margin-top: 20px; font-size: 1.2rem; }
+        .score { font-size: 2rem; font-weight: bold; color: #2ed573; }
+        button { padding: 10px 20px; font-size: 1rem; cursor: pointer; background: #333; color: white; border: none; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div id="visualizer">
-        <div class="guide" style="left: 0%;"></div>
-        <div class="guide" style="left: 50%;"></div>
-        <div class="guide" style="left: 33.3%; height: 30%; border-left: 2px dashed yellow;"></div>
-        <div class="guide" style="left: 66.6%; height: 30%; border-left: 2px dashed yellow;"></div>
+
+<div class="container">
+    <h2>リズム正確度計測</h2>
+    <p>BPMを設定して「開始」後、リズムに合わせて叩いてください</p>
+    
+    <div class="controls">
+        <div class="input-group">
+            <label>BPM</label>
+            <input type="number" id="bpm" value="120">
+        </div>
+        <div class="input-group">
+            <label>左手 (拍)</label>
+            <input type="number" id="left-beat" value="3">
+        </div>
+        <div class="input-group">
+            <label>右手 (拍)</label>
+            <input type="number" id="right-beat" value="2">
+        </div>
     </div>
-    <div class="container">
-        <div id="left-pad" class="pad">左手: 2拍子</div>
-        <div id="right-pad" class="pad">右手: 3拍子</div>
+
+    <button id="start-btn">計測開始 (5秒間)</button>
+
+    <div class="tap-zones">
+        <div id="left-zone" class="zone">左手 (Sキー)</div>
+        <div id="right-zone" class="zone">右手 (Lキー)</div>
     </div>
 
-    <script>
-        const leftPad = document.getElementById('left-pad');
-        const rightPad = document.getElementById('right-pad');
-        const visualizer = document.getElementById('visualizer');
+    <div class="results">
+        <div>左手正確度: <span id="left-score" class="score">0</span>%</div>
+        <div>右手正確度: <span id="right-score" class="score">0</span>%</div>
+    </div>
+</div>
 
-        let startTime = Date.now();
-        const loopDuration = 2000; // 2秒で1サイクル
+<script>
+    let isRunning = false;
+    let startTime;
+    let leftTaps = [], rightTaps = [];
+    const duration = 5000; // 5秒間計測
 
-        function handleTap(type) {
-            const now = Date.now();
-            const elapsed = (now - startTime) % loopDuration;
-            const xPercent = (elapsed / loopDuration) * 100;
+    const startBtn = document.getElementById('start-btn');
+    const bpmInput = document.getElementById('bpm');
+    const leftBeatInput = document.getElementById('left-beat');
+    const rightBeatInput = document.getElementById('right-beat');
 
-            const dot = document.createElement('div');
-            dot.className = 'hit';
-            dot.style.left = xPercent + '%';
-            dot.style.top = (type === 'left' ? '70%' : '30%') ;
-            dot.style.backgroundColor = (type === 'left' ? '#ffcccc' : '#cceeff');
-            
-            visualizer.appendChild(dot);
-            setTimeout(() => dot.remove(), 2000);
+    function handleTap(side) {
+        if (!isRunning) return;
+        const now = performance.now() - startTime;
+        if (side === 'left') {
+            leftTaps.push(now);
+            visualFeedback('left-zone');
+        } else {
+            rightTaps.push(now);
+            visualFeedback('right-zone');
         }
+    }
 
-        leftPad.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap('left'); });
-        rightPad.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap('right'); });
-        // PCでのテスト用
-        leftPad.addEventListener('mousedown', () => handleTap('left'));
-        rightPad.addEventListener('mousedown', () => handleTap('right'));
-    </script>
+    function visualFeedback(id) {
+        const el = document.getElementById(id);
+        el.classList.add('active');
+        setTimeout(() => el.classList.remove('active'), 50);
+    }
+
+    // キーボード操作
+    window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 's') handleTap('left');
+        if (e.key.toLowerCase() === 'l') handleTap('right');
+    });
+
+    // タッチ操作
+    document.getElementById('left-zone').addEventListener('mousedown', () => handleTap('left'));
+    document.getElementById('right-zone').addEventListener('mousedown', () => handleTap('right'));
+
+    startBtn.onclick = () => {
+        isRunning = true;
+        leftTaps = [];
+        rightTaps = [];
+        startBtn.disabled = true;
+        startBtn.innerText = "計測中...";
+        
+        startTime = performance.now();
+
+        setTimeout(() => {
+            isRunning = false;
+            startBtn.disabled = false;
+            startBtn.innerText = "計測開始 (5秒間)";
+            calculateScore();
+        }, duration);
+    };
+
+    function calculateScore() {
+        const bpm = parseInt(bpmInput.value);
+        const beatMs = 60000 / bpm;
+        
+        const calcSideScore = (taps, division) => {
+            if (taps.length === 0) return 0;
+            const targetInterval = beatMs / (division / 4); // 4分音符基準の簡易計算
+            let totalError = 0;
+            
+            taps.forEach(tapTime => {
+                const nearestTarget = Math.round(tapTime / targetInterval) * targetInterval;
+                const error = Math.abs(tapTime - nearestTarget);
+                totalError += Math.min(error, targetInterval / 2);
+            });
+
+            const avgError = totalError / taps.length;
+            const accuracy = Math.max(0, 100 - (avgError / (targetInterval / 2) * 100));
+            return accuracy.toFixed(1);
+        };
+
+        document.getElementById('left-score').innerText = calcSideScore(leftTaps, parseInt(leftBeatInput.value));
+        document.getElementById('right-score').innerText = calcSideScore(rightTaps, parseInt(rightBeatInput.value));
+    }
+</script>
+
 </body>
 </html>
