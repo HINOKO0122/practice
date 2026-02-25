@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyrhythm Checker (2:3)</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin: 0; overflow: hidden; background: #f0f0f0; }
+        .container { display: flex; height: 80vh; }
+        .pad { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: white; user-select: none; touch-action: manipulation; }
+        #left-pad { background-color: #ff5f5f; } /* 2拍子 */
+        #right-pad { background-color: #5fafff; } /* 3拍子 */
+        #visualizer { height: 20vh; background: #333; position: relative; border-top: 4px solid #000; }
+        .marker { position: absolute; bottom: 0; width: 4px; height: 100%; background: white; }
+        .guide { position: absolute; bottom: 0; width: 2px; height: 50%; background: rgba(255,255,255,0.3); }
+        .hit { position: absolute; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body>
+    <div id="visualizer">
+        <div class="guide" style="left: 0%;"></div>
+        <div class="guide" style="left: 50%;"></div>
+        <div class="guide" style="left: 33.3%; height: 30%; border-left: 2px dashed yellow;"></div>
+        <div class="guide" style="left: 66.6%; height: 30%; border-left: 2px dashed yellow;"></div>
+    </div>
+    <div class="container">
+        <div id="left-pad" class="pad">左手: 2拍子</div>
+        <div id="right-pad" class="pad">右手: 3拍子</div>
+    </div>
+
+    <script>
+        const leftPad = document.getElementById('left-pad');
+        const rightPad = document.getElementById('right-pad');
+        const visualizer = document.getElementById('visualizer');
+
+        let startTime = Date.now();
+        const loopDuration = 2000; // 2秒で1サイクル
+
+        function handleTap(type) {
+            const now = Date.now();
+            const elapsed = (now - startTime) % loopDuration;
+            const xPercent = (elapsed / loopDuration) * 100;
+
+            const dot = document.createElement('div');
+            dot.className = 'hit';
+            dot.style.left = xPercent + '%';
+            dot.style.top = (type === 'left' ? '70%' : '30%') ;
+            dot.style.backgroundColor = (type === 'left' ? '#ffcccc' : '#cceeff');
+            
+            visualizer.appendChild(dot);
+            setTimeout(() => dot.remove(), 2000);
+        }
+
+        leftPad.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap('left'); });
+        rightPad.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap('right'); });
+        // PCでのテスト用
+        leftPad.addEventListener('mousedown', () => handleTap('left'));
+        rightPad.addEventListener('mousedown', () => handleTap('right'));
+    </script>
+</body>
+</html>
